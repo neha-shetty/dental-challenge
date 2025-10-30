@@ -1,86 +1,80 @@
-# Dental X-ray Wisdom Tooth Detection (Classification)
+# 🦷 Dental Wisdom Tooth Presence Classifier
 
-This project builds a binary image classifier to detect the presence of wisdom teeth in dental panoramic X-rays. It leverages annotations from the Dentex Challenge 2023 dataset to label each image as:
-- 1: Image contains at least one wisdom tooth
-- 0: No wisdom tooth present
+This repository contains a deep learning model designed to detect whether a dental X-ray contains at least one wisdom tooth.
 
-A ResNet50 backbone (pretrained on ImageNet) is fine-tuned to perform the classification using class balancing, light augmentation, and early stopping.
+It uses transfer learning with ResNet50 and the Dentex Challenge 2023 dataset for binary classification.
 
-## Contents
-- `dental-model (1).ipynb`: End-to-end notebook with data loading, labeling, visualization, training, and plotting
-- `README.md`: This file
+## Project Motivation
 
-## Data
-The notebook expects the Dentex Challenge training data to be available locally with the following structure (as used on Kaggle):
+This project actually started from a personal story — my cousin had a wisdom tooth problem, and the dentist mentioned they couldn’t predict when the tooth might erupt.
+
+That conversation sparked my curiosity: could machine learning help forecast tooth eruption stages automatically?
+
+Originally, the plan was to build a model to predict when a wisdom tooth might erupt based on dental X-rays. However, due to data limitations — mainly the lack of detailed eruption-stage labels and longitudinal scans — this initial version focuses on a simpler but important step: detecting whether a wisdom tooth is present or not in an X-ray.
+
+With more complete data, this could evolve into a much more interesting eruption prediction challenge in the future.
+
+## 🧩 Project Overview
+
+- **Dataset**: Dentex Challenge 2023 (Quadrant & Enumeration annotations)
+- **Task**: Binary classification — Wisdom tooth present vs. not present
+- **Model**: ResNet50 (ImageNet weights, fine-tuned)
+- **Framework**: TensorFlow / Keras
+- **Metrics**: Accuracy, AUC, Precision, Recall
+
+## 🏗️ Repository Structure
 ```
-/kaggle/input/dentex-challenge-2023/training_data/training_data/
-  ├── quadrant_enumeration/
-  │   ├── train_quadrant_enumeration.json
-  │   └── xrays/
-  └── quadrant-enumeration-disease/
-      ├── train_quadrant_enumeration_disease.json
-      └── xrays/
+dental-wisdom-detector/
+├─ data/
+│  ├─ raw/                         # Original dataset (not committed)
+│  └─ processed/                   # Generated CSVs, subsets for testing
+├─ notebooks/
+│  └─ eda.ipynb                    # Exploratory analysis
+├─ src/
+│  ├─ data/
+│  │  ├─ prepare.py                # Build labels from JSON annotations
+│  │  └─ dataset.py                # tf.data or generator pipeline
+│  ├─ models/
+│  │  └─ model.py                  # Model architecture builder
+│  ├─ train.py                     # Training pipeline
+│  └─ evaluate.py                  # Evaluation & metrics
+├─ tests/
+│  └─ test_dataset.py              # Unit tests for loaders
+├─ .gitignore
+├─ requirements.txt
+├─ README.md
+└─ LICENSE
 ```
 
-Adjust `base_path` in the notebook if your dataset lives elsewhere.
+Note: The current repo contains a single notebook implementing the pipeline. The above structure is a suggested future layout as the project grows.
 
-## Approach
-1. Load `images` and `annotations` from both JSON sources.
-2. Filter annotations where `category_id_2 == 7` (wisdom tooth).
-3. Label images: 1 if any wisdom-tooth annotation exists for the image, else 0.
-4. Balance classes by upsampling the minority class.
-5. Split into train/validation (stratified).
-6. Train a ResNet50-based classifier with light augmentation and early stopping.
-7. Plot training/validation accuracy and loss.
+## ⚙️ Setup Instructions
 
-## Environment
-Recommended Python 3.10+ with the following key packages:
-- tensorflow
-- opencv-python
-- scikit-learn
-- pandas
-- matplotlib
-- numpy
-- tqdm
-
-Example install:
+1. Environment setup
 ```bash
-python -m venv .venv
-source .venv/bin/activate  # on Windows: .venv\Scripts\activate
-pip install --upgrade pip
-pip install tensorflow opencv-python scikit-learn pandas matplotlib numpy tqdm
+python -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
 ```
 
-If you have a compatible GPU, consider installing a GPU-enabled TensorFlow build for faster training.
+2. Prepare data
+```bash
+python src/data/prepare.py --data-root /path/to/training_data --output data/processed/labels.csv
+```
 
-## Running
-1. Open the notebook `dental-model (1).ipynb`.
-2. Update `base_path` to point to your dataset root if needed.
-3. Run all cells to:
-   - Load and label data
-   - Visualize wisdom-tooth bounding boxes (sample)
-   - Train the classifier
-   - Plot training curves
+3. Train the model
+```bash
+python src/train.py --config configs/train.yaml
+```
 
-## Results
-- The notebook prints dataset counts and shows training history plots.
-- Early stopping is used to select the best validation loss.
-- You can extend the notebook with evaluation cells (confusion matrix, ROC/AUC) as needed.
+4. Evaluate results
+```bash
+python src/evaluate.py --model checkpoints/best_model.h5 --data data/processed/labels_val.csv
+```
 
-## Notes and Limitations
-- This project reframes detection as image-level classification based on presence of any wisdom tooth.
-- Input images are resized to 224×224, which may lose fine details compared to detection approaches.
-- Class balance is achieved with upsampling; consider alternative strategies (e.g., focal loss) for robustness.
+## 📊 Future Work
 
-## Extending
-- Add evaluation metrics and confusion matrix on a held-out test set
-- Export/snapshot the trained model (`model.save(...)`)
-- Try different backbones (EfficientNet, DenseNet) or fine-tuning strategies
-- Move to an object detector (e.g., RetinaNet, YOLO) for localization tasks
-
-## Acknowledgements
-- Dentex Challenge 2023 dataset.
-- Keras/TensorFlow for model training utilities.
-
-## License
-Specify your license here (e.g., MIT). If unsure, leave this section and decide before publishing.
+- Extend the model to predict eruption stages instead of simple presence detection.
+- Integrate bounding-box information to localize teeth precisely.
+- Build a larger annotated dataset with temporal (before-after) X-rays for eruption forecasting.
+- Explore vision transformers (ViT) or multi-task learning for detection + staging.
